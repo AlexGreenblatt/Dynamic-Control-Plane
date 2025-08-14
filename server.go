@@ -78,7 +78,7 @@ func registerRoute(router *gin.Engine, cfg RouteConfig) {
 	case http.MethodGet:
 		router.GET(cfgCopy.RouteName, createGetHandler())
 	case http.MethodPost:
-		router.POST(cfgCopy.RouteName, createPostHandler(cfgCopy.PolicyFileNames, regoPolicies))
+		router.POST(cfgCopy.RouteName, createPostHandler(cfgCopy.PolicyFileNames, cfg.RequestSchema, regoPolicies))
 	}
 }
 
@@ -102,17 +102,28 @@ func createGetHandler() gin.HandlerFunc {
 	}
 }
 
-func createPostHandler(policyFileNames []string, policies []string) gin.HandlerFunc {
+func createPostHandler(policyFileNames []string, requestSchema json.RawMessage, policies []string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		serviceID := ctx.Param("serviceId")
 
-		var body map[string]any
-		if err := ctx.ShouldBindJSON(&body); err != nil {
+		var requestBody map[string]any
+		if err := ctx.ShouldBindJSON(&requestBody); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 			return
 		}
 
-		violations := evaluateAllPolicies(body, policies)
+		var schemaMap map[string]any
+		if err := json.Unmarshal(requestSchema, &schemaMap); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse request schema"})
+			return
+		}
+
+		combinedBody := map[string]any{
+			"requestSchema": schemaMap,
+			"requestBody":   requestBody,
+		}
+
+		violations := evaluateAllPolicies(combinedBody, policies)
 		if len(violations) > 0 {
 			ctx.JSON(http.StatusBadRequest, ResponseFailure{
 				Violations: violations,
