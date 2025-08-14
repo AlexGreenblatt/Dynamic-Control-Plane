@@ -11,11 +11,11 @@ import (
 )
 
 type RouteConfig struct {
-	RouteName      string          `json:"routeName"`
-	Method         string          `json:"method"`
-	RequestSchema  json.RawMessage `json:"requestSchema"`
-	ResponseSchema json.RawMessage `json:"responseSchema"`
-	Policies       []string        `json:"policies"`
+	RouteName       string          `json:"routeName"`
+	Method          string          `json:"method"`
+	RequestSchema   json.RawMessage `json:"requestSchema"`
+	ResponseSchema  json.RawMessage `json:"responseSchema"`
+	PolicyFileNames []string        `json:"policies"`
 }
 
 type RequestBody struct {
@@ -69,8 +69,7 @@ func prepareRoutes(router *gin.Engine, configs []RouteConfig) {
 func registerRoute(router *gin.Engine, cfg RouteConfig) {
 	cfgCopy := cfg // avoid closure capture
 
-	// Load policies for this route
-	regoPolicies, err := readRegoPoliciesFromFiles(cfgCopy.Policies)
+	regoPolicies, err := readRegoPoliciesFromFiles(cfgCopy.PolicyFileNames)
 	if err != nil {
 		log.Fatalf("Failed to read policies: %v", err)
 	}
@@ -79,7 +78,7 @@ func registerRoute(router *gin.Engine, cfg RouteConfig) {
 	case http.MethodGet:
 		router.GET(cfgCopy.RouteName, createGetHandler())
 	case http.MethodPost:
-		router.POST(cfgCopy.RouteName, createPostHandler(regoPolicies))
+		router.POST(cfgCopy.RouteName, createPostHandler(cfgCopy.PolicyFileNames, regoPolicies))
 	}
 }
 
@@ -103,7 +102,7 @@ func createGetHandler() gin.HandlerFunc {
 	}
 }
 
-func createPostHandler(policies []string) gin.HandlerFunc {
+func createPostHandler(policyFileNames []string, policies []string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		serviceID := ctx.Param("serviceId")
 
@@ -118,7 +117,7 @@ func createPostHandler(policies []string) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, ResponseFailure{
 				Violations: violations,
 				Message:    "Validation failed",
-				Policies:   policies,
+				Policies:   policyFileNames,
 			})
 			return
 		}
