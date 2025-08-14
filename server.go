@@ -75,18 +75,35 @@ func registerRoute(router *gin.Engine, cfg RouteConfig) {
 		log.Fatalf("Failed to read policies: %v", err)
 	}
 
-	handler := createHandler(cfgCopy, regoPolicies)
-
 	switch strings.ToUpper(cfgCopy.Method) {
 	case http.MethodGet:
-		router.GET(cfgCopy.RouteName, handler)
+		router.GET(cfgCopy.RouteName, createGetHandler())
 	case http.MethodPost:
-		router.POST(cfgCopy.RouteName, handler)
+		router.POST(cfgCopy.RouteName, createPostHandler(regoPolicies))
 	}
 }
 
-// createHandler returns a Gin handler function for a route
-func createHandler(cfg RouteConfig, policies []string) gin.HandlerFunc {
+func createGetHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		serviceID := ctx.Param("serviceId")
+
+		var body map[string]any
+		if err := ctx.ShouldBindJSON(&body); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, ResponseSuccess{
+			Message:     "OK",
+			ServiceID:   serviceID,
+			Name:        "Some name",
+			Status:      "Active",
+			LastUpdated: time.Now().UTC(),
+		})
+	}
+}
+
+func createPostHandler(policies []string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		serviceID := ctx.Param("serviceId")
 
@@ -101,7 +118,7 @@ func createHandler(cfg RouteConfig, policies []string) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, ResponseFailure{
 				Violations: violations,
 				Message:    "Validation failed",
-				Policies:   cfg.Policies,
+				Policies:   policies,
 			})
 			return
 		}
