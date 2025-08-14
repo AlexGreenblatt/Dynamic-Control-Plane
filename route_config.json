@@ -1,0 +1,62 @@
+[
+  {
+    "routeName": "/v1/status",
+    "method": "GET",
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "serviceId": {
+          "type": "string",
+          "description": "Unique identifier for the service"
+        },
+        "includeDetails": {
+          "type": "boolean",
+          "description": "Flag to include detailed information in the response"
+        }
+      },
+      "required": ["serviceId"]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "serviceId": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "policies": [
+      "validateServiceId.rego"
+    ]
+  },
+  {
+    "routeName": "/v1/services/:serviceId/traffic",
+    "method": "POST",
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "serviceId": {
+          "type": "string",
+          "description": "Unique identifier for the service"
+        },
+        "verbose": {
+          "type": "boolean",
+          "description": "Flag to include detailed information in the response"
+        }
+      },
+      "required": ["serviceId"]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "serviceId": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "policies": [
+      "validateServiceId.rego", "validateVerbose.rego"
+    ]
+  }
+]
