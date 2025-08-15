@@ -43,35 +43,41 @@ type PolicyResult struct {
 
 // serve is the main entry point for starting the server
 func serve() {
-	configs := loadRouteConfigs()
+	configs, err := loadRouteConfigs()
+	if err != nil {
+		log.Printf("Error loading route config: %v", err)
+		return
+	}
 	router := gin.Default()
 	prepareRoutes(router, configs)
 	startServer(router)
 }
 
 // loadRouteConfigs loads route configurations from JSON
-func loadRouteConfigs() []RouteConfig {
+func loadRouteConfigs() ([]RouteConfig, error) {
 	configs, err := readRouteConfigJSON()
 	if err != nil {
-		log.Fatalf("Failed to load route config: %v", err)
+		return nil, err
 	}
-	return configs
+	return configs, nil
 }
 
 // prepareRoutes sets up routes and handlers for the given router
 func prepareRoutes(router *gin.Engine, configs []RouteConfig) {
 	for _, cfg := range configs {
-		registerRoute(router, cfg)
+		if err := registerRoute(router, cfg); err != nil {
+			log.Printf("Skipping route %q: %v", cfg.RouteName, err)
+		}
 	}
 }
 
 // registerRoute registers a single route and its handler
-func registerRoute(router *gin.Engine, cfg RouteConfig) {
+func registerRoute(router *gin.Engine, cfg RouteConfig) error {
 	cfgCopy := cfg // avoid closure capture
 
 	regoPolicies, err := readRegoPoliciesFromFiles(cfgCopy.PolicyFileNames)
 	if err != nil {
-		log.Fatalf("Failed to read policies: %v", err)
+		return err
 	}
 
 	switch strings.ToUpper(cfgCopy.Method) {
@@ -80,6 +86,8 @@ func registerRoute(router *gin.Engine, cfg RouteConfig) {
 	case http.MethodPost:
 		router.POST(cfgCopy.RouteName, createPostHandler(cfgCopy.PolicyFileNames, cfg.RequestSchema, regoPolicies))
 	}
+
+	return nil
 }
 
 func createGetHandler() gin.HandlerFunc {
