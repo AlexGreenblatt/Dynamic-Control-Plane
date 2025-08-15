@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -18,11 +19,6 @@ type RouteConfig struct {
 	PolicyFileNames []string        `json:"policies"`
 }
 
-type RequestBody struct {
-	ServiceID any `json:"serviceId"`
-	Verbose   any `json:"verbose"`
-}
-
 type ResponseSuccess struct {
 	Message     string    `json:"message"`
 	ServiceID   string    `json:"serviceId"`
@@ -35,10 +31,6 @@ type ResponseFailure struct {
 	Violations []string `json:"violations"`
 	Message    string   `json:"message"`
 	Policies   []string `json:"policies"`
-}
-
-type PolicyResult struct {
-	Violations []string `json:"violations"`
 }
 
 // serve is the main entry point for starting the server
@@ -85,6 +77,8 @@ func registerRoute(router *gin.Engine, cfg RouteConfig) error {
 		router.GET(cfgCopy.RouteName, createGetHandler())
 	case http.MethodPost:
 		router.POST(cfgCopy.RouteName, createPostHandler(cfgCopy.PolicyFileNames, cfg.RequestSchema, regoPolicies))
+	default:
+		return fmt.Errorf("unsupported HTTP method: %s", cfgCopy.Method)
 	}
 
 	return nil
@@ -92,17 +86,8 @@ func registerRoute(router *gin.Engine, cfg RouteConfig) error {
 
 func createGetHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		serviceID := ctx.Param("serviceId")
-
-		var body map[string]any
-		if err := ctx.ShouldBindJSON(&body); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
-			return
-		}
-
 		ctx.JSON(http.StatusOK, ResponseSuccess{
 			Message:     "OK",
-			ServiceID:   serviceID,
 			Name:        "Some name",
 			Status:      "Active",
 			LastUpdated: time.Now().UTC(),

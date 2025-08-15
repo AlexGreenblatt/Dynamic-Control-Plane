@@ -8,6 +8,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/rego"
 )
 
+type PolicyResult struct {
+	Violations []string `json:"violations"`
+}
+
 func evaluatePolicy(input map[string]any, policy string) ([]string, error) {
 	ctx := context.Background()
 
