@@ -2,20 +2,6 @@
   {
     "routeName": "/v1/status",
     "method": "GET",
-    "requestSchema": {
-      "type": "object",
-      "properties": {
-        "serviceId": {
-          "type": "string",
-          "description": "Unique identifier for the service"
-        },
-        "includeDetails": {
-          "type": "boolean",
-          "description": "Flag to include detailed information in the response"
-        }
-      },
-      "required": ["serviceId"]
-    },
     "responseSchema": {
       "type": "object",
       "properties": {
@@ -25,10 +11,7 @@
         "status": { "type": "string", "enum": ["Active", "Inactive", "Maintenance"] },
         "lastUpdated": { "type": "string", "format": "date-time" }
       }
-    },
-    "policies": [
-      "validateServiceId.rego"
-    ]
+    }
   },
   {
     "routeName": "/v1/services/:serviceId/traffic",
